@@ -188,7 +188,10 @@ export class Universe {
       const fps = Math.round(this.samples / this.total);
       if (fps < 28 && !this.paused) this.lowFrames++;
       else this.lowFrames = 0;
-      if (this.lowFrames >= 3 && this.particleSize > 64) {
+      if (
+        (this.lowFrames >= 3 || (fps < 12 && this.lowFrames >= 1)) &&
+        this.particleSize > 64
+      ) {
         this.particleSize /= 2;
         const next = new Galaxy(this.renderer, this.particleSize);
         this.galaxy.transferTo(next);
@@ -196,7 +199,7 @@ export class Universe {
         this.galaxy.dispose();
         this.galaxy = next;
         this.scene.add(next.points, next.trails);
-        this.renderer.setPixelRatio(1);
+        this.renderer.setPixelRatio(Math.min(1, this.particleSize / 128));
         this.resize();
         this.lowFrames = 0;
       }

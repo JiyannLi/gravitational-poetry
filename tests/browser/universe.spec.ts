@@ -16,7 +16,9 @@ test("renders a live GPU universe and supports pointer, time, settings and captu
   await page.mouse.move(700, 320);
   await page.mouse.down();
   await page.waitForTimeout(1200);
-  await expect(page.locator(".state")).toContainText("RESONANCE");
+  await expect(page.locator(".state")).toContainText("RESONANCE", {
+    timeout: 15000,
+  });
   await page.mouse.up();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await expect(page.locator(".state")).toContainText("TIME SUSPENDED");

@@ -1,0 +1,498 @@
+:root {
+  font-family: "DM Sans", sans-serif;
+  color: #e8f0ff;
+  background: #03040a;
+  font-synthesis: none;
+  font-weight: 400;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+a,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 1px solid #8bd8ff;
+  outline-offset: 6px;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+main {
+  height: 100svh;
+  min-height: 560px;
+  overflow: hidden;
+  position: relative;
+}
+.universe {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+.universe canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 57% 48%,
+    transparent 25%,
+    #03040a33 65%,
+    #03040ac9 100%
+  );
+}
+.chrome {
+  transition:
+    opacity 1s,
+    transform 1s;
+}
+.immersed .chrome {
+  opacity: 0;
+  pointer-events: none;
+}
+header {
+  position: absolute;
+  top: 38px;
+  left: 48px;
+  right: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.wordmark {
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  gap: 12px;
+  font-size: 9px;
+  letter-spacing: 2.9px;
+  line-height: 1.7;
+}
+.wordmark b {
+  font-weight: 500;
+  letter-spacing: 6.8px;
+}
+.orbit-logo {
+  font-size: 35px;
+  line-height: 1;
+}
+.edition {
+  text-align: center;
+  font-size: 8px;
+  letter-spacing: 2.6px;
+  color: #8c93a6;
+}
+.edition span {
+  display: block;
+  margin-top: 9px;
+  font-size: 7px;
+  letter-spacing: 2px;
+  color: #50596e;
+}
+.icon-button {
+  border: 1px solid #ffffff25;
+  border-radius: 50%;
+  background: transparent;
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  color: #a8b3c8;
+}
+.intro {
+  position: absolute;
+  top: 25%;
+  left: 8%;
+  pointer-events: none;
+}
+.eyebrow {
+  font-size: 8px;
+  letter-spacing: 3px;
+  color: #91abc9;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.eyebrow > span {
+  display: inline-block;
+  width: 16px;
+  height: 1px;
+  background: #8bd8ff;
+}
+h1 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 300;
+  font-size: clamp(52px, 6.6vw, 104px);
+  line-height: 0.97;
+  letter-spacing: -3px;
+  margin: 25px 0 20px;
+  text-shadow: 0 4px 40px #03040a;
+}
+h1 em {
+  font-weight: 300;
+  color: #c1d2ed;
+}
+p {
+  font-size: 11px;
+  color: #a2adc1;
+  line-height: 1.9;
+  letter-spacing: 0.3px;
+}
+.intro-rule {
+  width: 38px;
+  height: 1px;
+  background: #778da95c;
+  margin: 28px 0 17px;
+}
+.intro-caption {
+  font-size: 8px;
+  letter-spacing: 2.2px;
+  color: #727f98;
+}
+.intro.compact {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+.invitation {
+  position: absolute;
+  right: 8%;
+  top: 42%;
+  width: 220px;
+  text-align: center;
+}
+.spark {
+  font-size: 27px;
+  color: #c1d4ee;
+}
+h2 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 26px;
+  font-weight: 400;
+  margin: 15px 0 10px;
+}
+.invitation p {
+  font-size: 10px;
+  color: #8b98af;
+  line-height: 1.9;
+  margin-bottom: 25px;
+}
+.camera-button {
+  border: 1px solid #a6caff4d;
+  background: linear-gradient(120deg, #749ac51c, #354f7110);
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding: 13px 20px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  border-radius: 3px;
+}
+.camera-button:hover {
+  background: #8bd8ff20;
+}
+.text-button {
+  border: 0;
+  background: none;
+  padding: 17px;
+  font-size: 9px;
+  color: #a3b4cc;
+  letter-spacing: 0.5px;
+}
+.text-button span {
+  margin-left: 10px;
+}
+.invitation small {
+  display: block;
+  font-size: 7px;
+  color: #66758d;
+  letter-spacing: 0.4px;
+}
+.coordinates {
+  position: absolute;
+  left: 48px;
+  bottom: 154px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 7px;
+  letter-spacing: 1.8px;
+  color: #5b6a84;
+}
+.coordinates i {
+  width: 20px;
+  height: 1px;
+  background: #48566f;
+  margin: 5px 0;
+}
+.state {
+  position: absolute;
+  right: 48px;
+  bottom: 154px;
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-align: right;
+  color: #a8b9d3;
+}
+.state small {
+  display: block;
+  margin-top: 12px;
+  color: #5f6e86;
+  font-size: 7px;
+  letter-spacing: 1px;
+}
+.state small span {
+  margin: 0 5px;
+}
+.status-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  background: #a5c8eb;
+  border-radius: 50%;
+  margin: 0 8px 2px 0;
+  box-shadow: 0 0 8px #8bd8ff;
+}
+footer {
+  position: absolute;
+  bottom: 32px;
+  left: 48px;
+  right: 48px;
+  border-top: 1px solid #a3bed51c;
+  padding-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mode-label,
+.footer-note {
+  font-size: 7px;
+  letter-spacing: 2px;
+  color: #a8b6ca;
+  line-height: 1.8;
+}
+.mode-label span {
+  display: block;
+  font-size: 6px;
+  letter-spacing: 1.5px;
+  color: #536680;
+  margin-top: 4px;
+}
+.footer-note {
+  text-align: right;
+  color: #6e7f98;
+  font-size: 6px;
+}
+.footer-note span {
+  color: #495a74;
+}
+nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid #a3b9d51a;
+  background: #090e1b88;
+  backdrop-filter: blur(15px);
+  border-radius: 7px;
+}
+nav button {
+  background: transparent;
+  border: 0;
+  color: #7689a5;
+  min-width: 34px;
+  height: 33px;
+  border-radius: 4px;
+  font-size: 16px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+nav button:hover {
+  color: #e1ecfc;
+  background: #ffffff08;
+}
+nav button.selected {
+  background: #6488b51a;
+  color: #cfe4ff;
+}
+.button-label {
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  padding-right: 8px;
+}
+nav i {
+  height: 17px;
+  width: 1px;
+  background: #ffffff17;
+  margin: 0 5px;
+}
+.panel {
+  position: absolute;
+  right: 48px;
+  bottom: 120px;
+  width: 310px;
+  background: #080e1bee;
+  border: 1px solid #7b9bcf30;
+  backdrop-filter: blur(24px);
+  padding: 26px;
+  border-radius: 5px;
+  z-index: 4;
+}
+.panel label {
+  display: block;
+  font-size: 10px;
+  color: #9fb1cb;
+  margin: 22px 0;
+}
+.panel output {
+  float: right;
+  color: #d1e2fb;
+}
+.panel input {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  accent-color: #93bce6;
+}
+.panel small {
+  font-size: 9px;
+  line-height: 1.8;
+  color: #657b99;
+}
+.guide {
+  top: 110px;
+  bottom: auto;
+}
+.close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  border: 0;
+  background: none;
+  color: #8ca3c1;
+  font-size: 20px;
+}
+.notice {
+  position: absolute;
+  top: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 560px;
+  width: 85%;
+  padding: 15px 35px 15px 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  background: #10192fee;
+  border: 1px solid #b6cdec44;
+  border-radius: 5px;
+  z-index: 9;
+}
+.notice button {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  background: none;
+  border: 0;
+}
+.guide p {
+  font-size: 11px;
+}
+@media (max-width: 750px) {
+  header {
+    top: 24px;
+    left: 24px;
+    right: 24px;
+  }
+  .edition {
+    display: none;
+  }
+  .intro {
+    top: 21%;
+    left: 8%;
+  }
+  h1 {
+    font-size: 64px;
+  }
+  .intro p {
+    font-size: 9px;
+  }
+  .intro-caption {
+    font-size: 6px;
+  }
+  .invitation {
+    right: 7%;
+    top: 53%;
+    width: 170px;
+  }
+  .invitation h2 {
+    font-size: 23px;
+  }
+  .invitation p {
+    font-size: 9px;
+    margin-bottom: 14px;
+  }
+  .spark {
+    display: none;
+  }
+  .coordinates {
+    left: 24px;
+    bottom: 150px;
+    font-size: 6px;
+  }
+  .state {
+    right: 24px;
+    bottom: 150px;
+    font-size: 7px;
+  }
+  .state small {
+    font-size: 6px;
+  }
+  footer {
+    left: 24px;
+    right: 24px;
+    bottom: 24px;
+    justify-content: center;
+    padding-top: 20px;
+  }
+  .mode-label,
+  .footer-note {
+    display: none;
+  }
+  nav {
+    gap: 3px;
+  }
+  nav button {
+    min-width: 30px;
+  }
+  .panel {
+    right: 20px;
+    width: min(310px, calc(100% - 40px));
+  }
+  .button-label {
+    font-size: 7px;
+  }
+  main {
+    min-height: 620px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chrome {
+    transition: none;
+  }
+}

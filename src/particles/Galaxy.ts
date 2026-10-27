@@ -198,26 +198,9 @@ alpha=.3+p.w*.6;gl_PointSize=clamp((1.1+p.w*1.8)*pixelRatio*48./max(5.,-view.z),
         );
     this.sync();
   }
-  transferTo(next: Galaxy) {
-    for (const [from, to] of [
-      [this.pos, next.pos],
-      [this.vel, next.vel],
-    ])
-      for (const target of to.renderTargets)
-        next.gpu.renderTexture(
-          this.gpu.getCurrentRenderTarget(from).texture,
-          target,
-        );
-    next.time = this.time;
-    next.lastHistory = this.time;
-    next.gpu.renderTexture(
-      this.gpu.getCurrentRenderTarget(this.pos).texture,
-      next.history,
-    );
-    next.sync();
-  }
-  quality(fraction: number) {
-    this.points.geometry.setDrawRange(0, Math.floor(this.count * fraction));
+  setPixelRatio(ratio: number) {
+    (this.points.material as THREE.ShaderMaterial).uniforms.pixelRatio.value =
+      ratio;
   }
   /** Small readback for numerical diagnostics; not used by the animation loop. */
   sample() {

@@ -29,7 +29,7 @@ npm run preview
 
 ## Implemented
 
-- 65,536 desktop / 16,384 mobile particles initially, with adaptive GPU texture downsampling to 4,096 on slow devices.
+- 65,536 desktop / 16,384 mobile particles, retained for the lifetime of the scene. The startup preset and capped device pixel ratio stay stable; FPS reporting never removes matter or changes render resolution.
 - GPU position/velocity integration, fixed-step velocity Verlet, softened gravitational fields, persistent autonomous evolution, bounded matter emission, sampled trails.
 - Perspective depth, distant stars, soft nebula layer, restrained bloom, tone mapping, local fonts and responsive immersive UI.
 - Two-hand MediaPipe input with confidence filtering, exponential field smoothing, pinch control and held-fist hysteresis.
@@ -57,6 +57,6 @@ Deployment is only confirmed when the Pages workflow succeeds and the returned p
 
 See [architecture](docs/ARCHITECTURE.md) and [agent instructions](AGENTS.md). Phase 2 introduces mutually interacting massive bodies and binary/three-body dynamics; Phase 3 adds state-driven cosmic phenomena; Phase 4 adds audio and broader device refinement.
 
-This prototype does not implement black holes, genesis, massive celestial bodies or audio. GPU float-target support is required. The nebula background is an artistic layer rather than volumetric scattering. Adaptive quality intentionally trades particle density for responsiveness. Real hand-tracking quality and sustained hardware-GPU performance remain device-specific validation tasks.
+This prototype does not implement black holes, genesis, massive celestial bodies or audio. GPU float-target support is required. The nebula background is an artistic layer rather than volumetric scattering. The fixed population avoids brightness jumps but can be expensive on low-end GPUs; there is currently no automatic runtime density reduction. Real hand-tracking quality and sustained hardware-GPU performance remain device-specific validation tasks.
 
 For a reproducible model/inference smoke check, download the official model linked above over verified HTTPS, start `npm run preview`, then run `HAND_MODEL_PATH=/absolute/path/hand_landmarker.task npm run test:camera`. This uses Chromium synthetic video and real model inference; it does not validate real-hand accuracy.

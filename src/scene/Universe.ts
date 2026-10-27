@@ -23,8 +23,7 @@ export class Universe {
   private elapsed = 0;
   private samples = 0;
   private total = 0;
-  private lowFrames = 0;
-  private particleSize = 256;
+  private viewportDirty = true;
   private input: Interaction = {
     fields: [
       { position: [0, 0, 0], strength: 0, radius: 8, creation: 0 },
@@ -52,14 +51,16 @@ export class Universe {
       Math.min(devicePixelRatio, CONFIG.maxPixelRatio),
     );
     this.renderer.setClearColor("#03040a");
+    // Clear in the scene render target's color space, not the preceding GPU/output pass's state.
+    this.scene.background = new THREE.Color("#03040a");
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.1;
     container.appendChild(this.renderer.domElement);
     this.camera.position.set(0, 0, 52);
     this.camera.lookAt(0, 0, 0);
-    this.particleSize =
+    const particleSize =
       innerWidth < 700 ? CONFIG.mobileSize : CONFIG.desktopSize;
-    this.galaxy = new Galaxy(this.renderer, this.particleSize);
+    this.galaxy = new Galaxy(this.renderer, particleSize);
     this.scene.add(this.galaxy.points, this.galaxy.trails);
     const starGeometry = new THREE.BufferGeometry(),
       stars = new Float32Array(2200 * 3);
@@ -132,14 +133,27 @@ export class Universe {
       this.hands = null;
     }
   };
+  // Resize events only invalidate the viewport. Changing a
+  // canvas backing size clears it, so apply all changes immediately before drawing.
   private resize = () => {
-    const w = this.container.clientWidth,
-      h = this.container.clientHeight;
+    this.viewportDirty = true;
+  };
+  private applyViewport() {
+    const ratio = Math.min(devicePixelRatio, CONFIG.maxPixelRatio);
+    if (!this.viewportDirty && this.renderer.getPixelRatio() === ratio) return;
+    const w = Math.max(1, this.container.clientWidth);
+    const h = Math.max(1, this.container.clientHeight);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    if (this.renderer.getPixelRatio() !== ratio) {
+      this.renderer.setPixelRatio(ratio);
+      this.composer.setPixelRatio(ratio);
+    }
     this.renderer.setSize(w, h);
     this.composer.setSize(w, h);
-  };
+    this.galaxy.setPixelRatio(ratio);
+    this.viewportDirty = false;
+  }
   private tick = (now: number) => {
     if (this.disposed) return;
     this.frame = requestAnimationFrame(this.tick);
@@ -147,6 +161,7 @@ export class Universe {
     const dt = Math.min(wallDt, 0.1);
     this.previous = now;
     if (document.hidden) return;
+    this.applyViewport();
     let target: Interaction;
     try {
       target = this.hands
@@ -186,23 +201,8 @@ export class Universe {
     this.total += wallDt;
     if (this.total >= 1) {
       const fps = Math.round(this.samples / this.total);
-      if (fps < 28 && !this.paused) this.lowFrames++;
-      else this.lowFrames = 0;
-      if (
-        (this.lowFrames >= 3 || (fps < 12 && this.lowFrames >= 1)) &&
-        this.particleSize > 64
-      ) {
-        this.particleSize /= 2;
-        const next = new Galaxy(this.renderer, this.particleSize);
-        this.galaxy.transferTo(next);
-        this.scene.remove(this.galaxy.points, this.galaxy.trails);
-        this.galaxy.dispose();
-        this.galaxy = next;
-        this.scene.add(next.points, next.trails);
-        this.renderer.setPixelRatio(Math.min(1, this.particleSize / 128));
-        this.resize();
-        this.lowFrames = 0;
-      }
+      // FPS is telemetry, not a reason to replace matter or resize a presented
+      // canvas. Keep the startup quality preset for this universe's lifetime.
       this.report(
         fps,
         this.galaxy.points.geometry.drawRange.count === Infinity
@@ -256,6 +256,7 @@ export class Universe {
     this.elapsed = 0;
   }
   screenshot() {
+    this.applyViewport();
     this.composer.render();
     const a = document.createElement("a");
     a.download = "gravitational-poetry.png";

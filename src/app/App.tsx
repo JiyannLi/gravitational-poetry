@@ -263,8 +263,8 @@ export function App() {
             />
           </label>
           <small>
-            Particle visibility and resolution adapt to device performance.
-            Audio arrives in a later chapter.
+            Particle density is selected at startup and stays stable. Audio
+            arrives in a later chapter.
           </small>
         </section>
       )}

@@ -22,11 +22,25 @@ const browser = await chromium.launch({
 });
 try {
   const page = await browser.newPage();
+  await page.addInitScript(() => {
+    window.handWorkerResults = 0;
+    const Original = window.Worker;
+    window.Worker = class extends Original {
+      constructor(...args) {
+        super(...args);
+        this.addEventListener("message", ({ data }) => {
+          if (data.type === "result") window.handWorkerResults++;
+        });
+      }
+    };
+  });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.route("https://storage.googleapis.com/**", (route) =>
-    route.fulfill({ path: model, contentType: "application/octet-stream" }),
-  );
+  await page
+    .context()
+    .route("https://storage.googleapis.com/**", (route) =>
+      route.fulfill({ path: model, contentType: "application/octet-stream" }),
+    );
   await page.goto(process.env.TEST_BASE_URL || "http://127.0.0.1:4173");
   await page
     .getByRole("button", { name: "Enable camera", exact: true })
@@ -34,14 +48,16 @@ try {
   await page
     .getByRole("button", { name: "Disable camera", exact: true })
     .waitFor({ timeout: 30000 });
-  await page.waitForTimeout(1500);
+  await page.waitForFunction(() => window.handWorkerResults > 0, null, {
+    timeout: 30000,
+  });
   assert.equal(await page.getByRole("alert").count(), 0);
   await page
     .getByRole("button", { name: "Disable camera", exact: true })
     .click();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: real MediaPipe model initialization, synthetic-frame inference, and camera stop. Real-hand accuracy is not covered.",
+    "PASS: real MediaPipe worker initialization, completed synthetic-frame inference, and camera stop. Real-hand accuracy is not covered.",
   );
 } finally {
   await browser.close();

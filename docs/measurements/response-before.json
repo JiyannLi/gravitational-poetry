@@ -1,0 +1,8 @@
+{
+  "environment": "Headless Chromium / SwiftShader, 640×480, controlled 60 Hz clock; synthetic input, no camera",
+  "inferenceSchedulingCallsPerSecond": 20,
+  "position90Ms": 266.6666666666667,
+  "fieldStrength90Ms": 466.6666666666667,
+  "pausedFrameMeanMs": 0.558928571429403,
+  "pausedDrawCalls": 1
+}

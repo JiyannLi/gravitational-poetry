@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Universe, type OrbitStatus } from "../scene/Universe";
+import type { CelestialShape } from "../particles/CelestialParticle";
 import { BODY_CONFIG, type OrbitPreset } from "../physics/BodySystem";
 export function App() {
   const host = useRef<HTMLDivElement>(null),
@@ -16,6 +17,7 @@ export function App() {
     [started, setStarted] = useState(false),
     [speed, setSpeed] = useState(1),
     [bloom, setBloom] = useState(0.62);
+  const [shape, setShape] = useState<CelestialShape>("sphere");
   const [systems, setSystems] = useState(false);
   const [mass, setMass] = useState(BODY_CONFIG.defaultMass);
   const [orbit, setOrbit] = useState<OrbitStatus>({
@@ -42,7 +44,15 @@ export function App() {
         `WebGL2 is unavailable on this device. Enable hardware acceleration or try a current browser. ${e instanceof Error ? e.message : ""}`,
       );
     }
-    return () => universe.current?.dispose();
+    if (import.meta.env.DEV)
+      Object.assign(window, {
+        poetryDiagnostics: () => universe.current?.diagnostics(),
+      });
+    return () => {
+      universe.current?.dispose();
+      if (import.meta.env.DEV)
+        delete (window as unknown as Record<string, unknown>).poetryDiagnostics;
+    };
   }, []);
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -234,7 +244,7 @@ export function App() {
       )}
       {mode === "star" && (
         <div className="placement-hint chrome">
-          Tap the universe to place a star · {orbit.stars}/3
+          Tap to place · Hold to gather, release to create · {orbit.stars}/3
         </div>
       )}
       {error && (
@@ -270,14 +280,15 @@ export function App() {
           <p>
             With the camera enabled: your left hand shapes matter; your right
             hand controls gravity. Pinch to concentrate; hold a left pinch for a
-            second to form one star, then release before creating another. Hold
-            a right fist to strengthen the field.
+            moment to gather a particle sphere, then release to give it an
+            orbit. Open your palm to scatter uncommitted dust. Hold a right fist
+            to strengthen the field.
           </p>
           <p>
-            <b>S</b> places a star. <b>B</b> seeds a binary orbit. <b>T</b>{" "}
-            begins three-body motion. <b>L</b> launches a gravity-assist
-            encounter. Switch to Gravity to gently pull stars without moving
-            them instantly.
+            <b>S</b> places a star; hold the pointer or a finger to watch it
+            form. <b>B</b> seeds a binary orbit. <b>T</b> begins three-body
+            motion. <b>L</b> launches a gravity-assist encounter. Switch to
+            Gravity to gently pull stars without moving them instantly.
           </p>
           <small>
             Your universe keeps evolving when your hands leave. Camera frames
@@ -323,6 +334,31 @@ export function App() {
               Gravitational slingshot <span>L</span>
             </button>
           </div>
+          <div
+            className="shape-options"
+            role="group"
+            aria-label="Particle body shape"
+          >
+            {(["sphere", "ring", "nebula"] as CelestialShape[]).map((value) => (
+              <button
+                key={value}
+                aria-pressed={shape === value}
+                onClick={() => {
+                  setShape(value);
+                  universe.current?.setShape(value);
+                }}
+              >
+                {value === "sphere"
+                  ? "Sphere"
+                  : value === "ring"
+                    ? "Ring"
+                    : "Nebula"}
+              </button>
+            ))}
+          </div>
+          <small>
+            Shape changes only the particles; gravity keeps evolving.
+          </small>
           <label>
             New star mass <output>{mass}</output>
             <input

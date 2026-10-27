@@ -1,0 +1,73 @@
+{
+  "environment": "Chromium SwiftShader, real MediaPipe CPU model in worker, synthetic 640×480 frames; isolated input probe, no universe rendering",
+  "maximumInFlight": 1,
+  "renderCallbacks": 37,
+  "mainRafGapMedianMs": 16.699999999999932,
+  "mainRafGapP95Ms": 66.70000000000005,
+  "rows": [
+    {
+      "inferenceMs": 389.5999999999767,
+      "captureToResultMs": 391.20000000001164,
+      "inFlight": 1,
+      "completed": 1,
+      "sourceAgeMs": 401.9000000000233,
+      "hands": 0
+    },
+    {
+      "inferenceMs": 39.20000000001164,
+      "captureToResultMs": 41.500000000023306,
+      "inFlight": 1,
+      "completed": 2,
+      "sourceAgeMs": 51.20000000003495,
+      "hands": 0
+    },
+    {
+      "inferenceMs": 48.59999999997672,
+      "captureToResultMs": 50.5,
+      "inFlight": 1,
+      "completed": 3,
+      "sourceAgeMs": 51.600000000034925,
+      "hands": 0
+    },
+    {
+      "inferenceMs": 40.29999999998836,
+      "captureToResultMs": 42.400000000046475,
+      "inFlight": 1,
+      "completed": 4,
+      "sourceAgeMs": 51.00000000002319,
+      "hands": 0
+    },
+    {
+      "inferenceMs": 41.899999999965075,
+      "captureToResultMs": 43.30000000001155,
+      "inFlight": 1,
+      "completed": 5,
+      "sourceAgeMs": 50.900000000046475,
+      "hands": 0
+    },
+    {
+      "inferenceMs": 36.20000000001164,
+      "captureToResultMs": 37.300000000046566,
+      "inFlight": 1,
+      "completed": 6,
+      "sourceAgeMs": 52.300000000046566,
+      "hands": 0
+    },
+    {
+      "inferenceMs": 38.79999999998836,
+      "captureToResultMs": 41.600000000034925,
+      "inFlight": 1,
+      "completed": 7,
+      "sourceAgeMs": 51.40000000002328,
+      "hands": 0
+    },
+    {
+      "inferenceMs": 39.29999999998836,
+      "captureToResultMs": 41.09999999999991,
+      "inFlight": 1,
+      "completed": 8,
+      "sourceAgeMs": 51.00000000002319,
+      "hands": 0
+    }
+  ]
+}

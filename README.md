@@ -23,9 +23,9 @@ npm run preview
 
 - Move the pointer: position a softened gravity field. Hold: deepen its strength. Scroll: adjust influence.
 - **C**: create flowing matter while holding. **G**: gravity mode. **Space**: pause/resume.
-- **S**: place a star on the next canvas click/tap. **B**: binary stars. **T**: three-body motion. **L**: a moving-star gravity-assist encounter. The Celestial systems panel also exposes these controls and the mass of newly created stars (up to three stars).
+- **S**: click/tap to place a star; hold to gather a particle sphere, release to create. **B**: binary stars. **T**: three-body motion. **L**: a moving-star gravity-assist encounter. The Celestial systems panel also exposes these controls and the mass of newly created stars (up to three stars).
 - Touch: drag and hold; two touches control two fields.
-- Enable camera: left hand shapes matter; pinch concentrates it, and a confident pinch held for 1.1 seconds creates one star. Release before creating the next. Right hand controls gravity; pinch or a held fist increases strength. Tracking loss smoothly releases control without clearing the universe.
+- Enable camera: left hand shapes matter; pinch immediately previews gathering dust, reaches a sphere in 650 ms, and release after at least 450 ms commits one star (40 ms release debounce). Short pinches and tracking loss disperse the preview without creating a body. Right hand controls gravity; pinch or a held fist increases strength. Tracking loss smoothly releases control without clearing the universe.
 - Settings: time multiplier and bloom. Toolbar: pause, reset, screenshot, camera, guide. Controls fade after inactivity and return on movement or keyboard input.
 
 ## Implemented
@@ -33,9 +33,10 @@ npm run preview
 - 65,536 desktop / 16,384 mobile particles, retained for the lifetime of the scene. The startup preset and capped device pixel ratio stay stable; FPS reporting never removes matter or changes render resolution.
 - GPU position/velocity integration, fixed-step velocity Verlet, softened gravitational fields, persistent autonomous evolution, bounded matter emission, sampled trails.
 - Perspective depth, distant stars, soft nebula layer, restrained bloom, tone mapping, local fonts and responsive immersive UI.
-- Two-hand MediaPipe input with confidence filtering, exponential field smoothing, pinch control and held-fist hysteresis.
+- Two-hand MediaPipe input in a dedicated single-frame worker; confidence filtering, adaptive time-based position smoothing, pinch preview/release and held-fist hysteresis.
+- Sphere / Ring / Nebula controls morph shared local-space particle distributions. 4,096 particles per desktop body / 2,048 on mobile; no solid sphere or halo mesh.
 - Pointer/touch fallback, permission/load errors, page visibility handling, context-loss messaging, screenshot and reset.
-- Up to three massive stars, mutually coupled softened Newtonian gravity, velocity-Verlet integration, depth-aware stellar surfaces, halos and persistent orbital trails.
+- Up to three massive stars, mutually coupled softened Newtonian gravity, velocity-Verlet integration, layered particle spheres and persistent orbital trails.
 - Binary and three-body initial conditions, user-created stars, inertial response to hand/pointer fields, autonomous evolution, and a low-mass probe for gravitational slingshots.
 - Slingshot recognition measures actual entry/exit velocity at a common encounter radius; no scripted trajectory or velocity kick.
 - Independent physics/input/rendering modules and a condition-driven event extension interface.
@@ -59,7 +60,7 @@ Deployment is only confirmed when the Pages workflow succeeds and the returned p
 
 ## Architecture and next steps
 
-See [architecture](docs/ARCHITECTURE.md) and [agent instructions](AGENTS.md). Phase 2 is implemented. Phase 3 can add state-driven collapse, tidal phenomena and black holes; Phase 4 adds audio and broader device refinement.
+See [visual/interaction measurements](docs/PHASE2-MORPH.md), [architecture](docs/ARCHITECTURE.md) and [agent instructions](AGENTS.md). Phase 2 is implemented. Phase 3 can add state-driven collapse, tidal phenomena and black holes; Phase 4 adds audio and broader device refinement.
 
 This prototype does not implement black holes, genesis, collisions/mergers or audio. The three-body preset is a physical initial condition, not a guaranteed repeating orbit; encounters may eject a body. Stellar radii are visual only, and nearby forces are softened. GPU float-target support is required. The nebula background is an artistic layer rather than volumetric scattering. The fixed population avoids brightness jumps but can be expensive on low-end GPUs; there is currently no automatic runtime density reduction. Real hand-tracking quality and sustained hardware-GPU performance remain device-specific validation tasks.
 

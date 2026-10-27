@@ -15,6 +15,7 @@ import {
 import { OrbitalEvents } from "../events/OrbitalEvents";
 import { CelestialBodies } from "./CelestialBodies";
 import type { Vec3 } from "../physics/field";
+import type { CelestialShape } from "../particles/CelestialParticle";
 import { CONFIG } from "../config/universe";
 export interface OrbitStatus {
   stars: number;
@@ -186,11 +187,12 @@ export class Universe {
     this.frame = requestAnimationFrame(this.tick);
     const wallDt = this.previous ? (now - this.previous) / 1000 : 0;
     const dt = Math.min(wallDt, 0.1);
+    const controlDt = Math.min(wallDt, 0.25);
     this.previous = now;
     if (document.hidden) return;
     this.applyViewport();
-    for (const position of this.pointer.takeStars(this.camera.aspect))
-      this.addStar(position);
+    for (const star of this.pointer.takeStars(this.camera.aspect))
+      this.addStar(star.position, star.formed);
     let target: Interaction;
     try {
       target = this.hands
@@ -204,19 +206,43 @@ export class Universe {
     }
     if (target.birth && target.birth.sequence !== this.lastGestureBirth) {
       this.lastGestureBirth = target.birth.sequence;
-      this.addStar(target.birth.position);
+      this.addStar(target.birth.position, true);
     }
+    if (target.formation && this.bodies.starCount < BODY_CONFIG.maxStars) {
+      // Preview control bypasses gravitational inertia; committed bodies do not.
+      const previous = this.input.fields[0].position;
+      const p = target.formation.position.map((v, i) =>
+        smooth(previous[i], v, controlDt, 40),
+      ) as Vec3;
+      this.celestial.previewFormation(
+        p,
+        target.formation.progress,
+        this.starMass,
+        this.bodies.starCount,
+      );
+    } else this.celestial.cancelPreview();
     this.input.active = target.active;
+    this.input.expansion = smooth(
+      this.input.expansion,
+      target.expansion,
+      controlDt,
+      24,
+    );
     this.input.fields.forEach((f, i) => {
       const t = target.fields[i];
       for (let j = 0; j < 3; j++)
         f.position[j] = smooth(
           f.position[j],
           t?.position[j] ?? f.position[j],
-          dt,
+          controlDt,
+          16 +
+            Math.min(
+              32,
+              Math.abs((t?.position[j] ?? f.position[j]) - f.position[j]) * 8,
+            ),
         );
-      f.strength = smooth(f.strength, t?.strength ?? 0, dt, 5);
-      f.creation = smooth(f.creation, t?.creation ?? 0, dt, 5);
+      f.strength = smooth(f.strength, t?.strength ?? 0, controlDt, 24);
+      f.creation = smooth(f.creation, t?.creation ?? 0, controlDt, 20);
     });
     if (!this.paused)
       this.clock.advance(dt, this.speed, (step) => {
@@ -225,7 +251,13 @@ export class Universe {
         this.galaxy.step(step, this.input, this.bodies.fields());
         this.elapsed += step;
       });
-    this.celestial.update(this.bodies);
+    this.celestial.update(
+      this.bodies,
+      controlDt,
+      this.renderer.getPixelRatio(),
+      this.paused,
+    );
+    this.galaxy.setOccluders(this.celestial.occluders());
     this.marker.position.set(...this.input.fields[0].position);
     (this.marker.material as THREE.MeshBasicMaterial).opacity = smooth(
       (this.marker.material as THREE.MeshBasicMaterial).opacity,
@@ -264,6 +296,7 @@ export class Universe {
     };
   }
   loadSystem(preset: OrbitPreset) {
+    this.celestial.cancelPreview();
     this.bodies.load(preset);
     this.orbitEvents.reset();
     this.orbitPreset = preset;
@@ -271,8 +304,12 @@ export class Universe {
     this.celestial.update(this.bodies);
     this.reportOrbit(this.orbitStatus());
   }
-  addStar(position: Vec3) {
-    const created = this.bodies.addStar(position, this.starMass);
+  addStar(position: Vec3, fromPreview = false) {
+    const created = this.bodies.addStar(
+      fromPreview ? (this.celestial.creationPosition ?? position) : position,
+      this.starMass,
+    );
+    if (fromPreview) this.celestial.releasePreview(created, this.bodies.time);
     this.orbitNotice = created ? "" : "This universe holds up to three stars.";
     if (created) {
       this.orbitPreset = "custom";
@@ -282,7 +319,22 @@ export class Universe {
     this.reportOrbit(this.orbitStatus());
     return !!created;
   }
+  setShape(shape: CelestialShape) {
+    this.celestial.shape = shape;
+  }
+  /** Development diagnostics separate recognition, control, and GPU rendering. No image data. */
+  diagnostics() {
+    return {
+      hands: this.hands ? { ...this.hands.diagnostics } : null,
+      control: this.input.fields.map((f) => ({
+        ...f,
+        position: [...f.position],
+      })),
+      shape: this.celestial.shape,
+    };
+  }
   clearStars() {
+    this.celestial.cancelPreview();
     this.bodies.clear();
     this.orbitEvents.reset();
     this.orbitPreset = "empty";

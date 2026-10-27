@@ -6,7 +6,8 @@ export class Pointer {
   private x = 0;
   private y = 0;
   private seen = false;
-  private stars: { x: number; y: number }[] = [];
+  private stars: { x: number; y: number; formed: boolean }[] = [];
+  private holdStart = 0;
   constructor(private canvas: HTMLCanvasElement) {
     canvas.addEventListener("pointermove", this.move);
     canvas.addEventListener("pointerdown", this.down);
@@ -25,6 +26,7 @@ export class Pointer {
   };
   private down = (e: PointerEvent) => {
     this.move(e);
+    if (!this.contacts.size) this.holdStart = performance.now();
     this.contacts.set(e.pointerId, { x: this.x, y: this.y });
     this.canvas.setPointerCapture(e.pointerId);
   };
@@ -35,7 +37,11 @@ export class Pointer {
       e.type === "pointerup"
     ) {
       this.move(e);
-      this.stars.push({ x: this.x, y: this.y });
+      this.stars.push({
+        x: this.x,
+        y: this.y,
+        formed: performance.now() - this.holdStart >= 450,
+      });
     }
     this.contacts.delete(e.pointerId);
     if (e.pointerType === "touch") this.seen = false;
@@ -47,8 +53,13 @@ export class Pointer {
     e.preventDefault();
     this.radius = Math.max(3, Math.min(18, this.radius - e.deltaY * 0.01));
   };
-  takeStars(aspect: number): Vec3[] {
-    return this.stars.splice(0).map((p) => [p.x * 22 * aspect, p.y * 22, 0]);
+  takeStars(aspect: number): { position: Vec3; formed: boolean }[] {
+    return this.stars
+      .splice(0)
+      .map((p) => ({
+        position: [p.x * 22 * aspect, p.y * 22, 0],
+        formed: p.formed,
+      }));
   }
   read(aspect: number): Interaction {
     const points =
@@ -56,6 +67,13 @@ export class Pointer {
         ? [...this.contacts.values()].slice(0, 2)
         : [{ x: this.x, y: this.y }];
     return {
+      formation:
+        this.mode === "star" && this.contacts.size
+          ? {
+              position: [this.x * 22 * aspect, this.y * 22, 0],
+              progress: Math.min(1, (performance.now() - this.holdStart) / 650),
+            }
+          : undefined,
       active: this.seen,
       expansion: 0,
       fields: points.map((p) => ({

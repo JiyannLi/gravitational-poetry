@@ -196,7 +196,7 @@ test("real page survives refresh, resize and delayed/failed camera model loading
   const modelStarted = new Promise<void>((resolve) => {
     modelRequested = resolve;
   });
-  await page.route("https://storage.googleapis.com/**", async (route) => {
+  await page.context().route("https://storage.googleapis.com/**", async (route) => {
     modelRequested();
     await modelBlocked;
     await route.fulfill({ status: 503, body: "Controlled model failure" });

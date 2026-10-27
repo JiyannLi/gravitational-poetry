@@ -2,6 +2,21 @@ import * as THREE from "three";
 import { GPUComputationRenderer } from "three/addons/misc/GPUComputationRenderer.js";
 import type { Field, Interaction } from "../physics/field";
 import { BODY_CONFIG } from "../physics/BodySystem";
+const silhouette = `
+uniform vec4 silhouettes[5]; uniform float silhouetteOpacity[5];
+float visibility(vec3 view) {
+ float visible=1.;
+ for(int i=0;i<5;i++) if(silhouettes[i].w>0.) {
+  vec3 c=(modelViewMatrix*vec4(silhouettes[i].xyz,1.)).xyz;
+  if(c.z<-.1 && view.z<-.1) {
+   float r=silhouettes[i].w;
+   float d=length(view.xy/(-view.z)*(-c.z)-c.xy);
+   float front=c.z+sqrt(max(0.,r*r-d*d));
+   visible*=1.-.94*silhouetteOpacity[i]*(1.-smoothstep(r*.8,r,d))*step(view.z,front);
+  }
+ }
+ return visible;
+}`;
 const force = `
 vec3 acceleration(vec3 p) {
  vec3 a=-p*5.0/pow(dot(p,p)+9.0,1.5);
@@ -115,12 +130,17 @@ void main(){vec2 uv=gl_FragCoord.xy/resolution.xy;vec3 p=texture2D(texturePositi
       uniforms: {
         positions: { value: null },
         pixelRatio: { value: renderer.getPixelRatio() },
+        silhouettes: {
+          value: Array.from({ length: 5 }, () => new THREE.Vector4()),
+        },
+        silhouetteOpacity: { value: [0, 0, 0, 0, 0] },
       },
       vertexShader: `
+${silhouette}
 attribute vec2 reference;uniform sampler2D positions;uniform float pixelRatio;varying vec3 color;varying float alpha;
 void main(){vec4 p=texture2D(positions,reference);vec4 view=modelViewMatrix*vec4(p.xyz,1.);gl_Position=projectionMatrix*view;
 float warm=smoothstep(.76,1.,p.w);color=mix(mix(vec3(.18,.34,.8),vec3(.55,.75,1.),p.w),vec3(1.,.68,.35),warm);
-alpha=.3+p.w*.6;gl_PointSize=clamp((1.1+p.w*1.8)*pixelRatio*48./max(5.,-view.z),1.,8.);}`,
+alpha=(.3+p.w*.6)*visibility(view.xyz);gl_PointSize=clamp((1.1+p.w*1.8)*pixelRatio*48./max(5.,-view.z),1.,8.);}`,
       fragmentShader: `varying vec3 color;varying float alpha;void main(){float d=length(gl_PointCoord-.5)*2.;if(d>1.)discard;float light=exp(-d*d*6.);gl_FragColor=vec4(color*1.5,light*alpha);}`,
     });
     this.history = this.gpu.createRenderTarget(
@@ -157,8 +177,10 @@ alpha=.3+p.w*.6;gl_PointSize=clamp((1.1+p.w*1.8)*pixelRatio*48./max(5.,-view.z),
         uniforms: {
           positions: { value: null },
           history: { value: this.history.texture },
+          silhouettes: material.uniforms.silhouettes,
+          silhouetteOpacity: material.uniforms.silhouetteOpacity,
         },
-        vertexShader: `attribute vec2 reference;attribute float end;uniform sampler2D positions;uniform sampler2D history;varying float opacity;void main(){vec3 p=texture2D(positions,reference).xyz;vec3 old=texture2D(history,reference).xyz;opacity=end*.18*(1.-step(3.,distance(p,old)));gl_Position=projectionMatrix*modelViewMatrix*vec4(mix(old,p,end),1.);}`,
+        vertexShader: `${silhouette}attribute vec2 reference;attribute float end;uniform sampler2D positions;uniform sampler2D history;varying float opacity;void main(){vec3 p=texture2D(positions,reference).xyz;vec3 old=texture2D(history,reference).xyz;opacity=end*.18*(1.-step(3.,distance(p,old)));vec4 view=modelViewMatrix*vec4(mix(old,p,end),1.);opacity*=visibility(view.xyz);gl_Position=projectionMatrix*view;}`,
         fragmentShader: `varying float opacity;void main(){gl_FragColor=vec4(.3,.55,1.,opacity);}`,
       }),
     );
@@ -214,6 +236,21 @@ alpha=.3+p.w*.6;gl_PointSize=clamp((1.1+p.w*1.8)*pixelRatio*48./max(5.,-view.z),
           target,
         );
     this.sync();
+  }
+  setOccluders(
+    bodies: { position: THREE.Vector3; radius: number; opacity: number }[],
+  ) {
+    const u = (this.points.material as THREE.ShaderMaterial).uniforms;
+    for (let i = 0; i < 5; i++) {
+      const body = bodies[i];
+      u.silhouettes.value[i].set(
+        body?.position.x ?? 0,
+        body?.position.y ?? 0,
+        body?.position.z ?? 0,
+        body?.radius ?? 0,
+      );
+      u.silhouetteOpacity.value[i] = body?.opacity ?? 0;
+    }
   }
   setPixelRatio(ratio: number) {
     (this.points.material as THREE.ShaderMaterial).uniforms.pixelRatio.value =

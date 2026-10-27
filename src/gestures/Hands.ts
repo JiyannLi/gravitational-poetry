@@ -1,4 +1,4 @@
-import type { HandLandmarker } from "@mediapipe/tasks-vision";
+import { HandInference } from "./HandInference";
 import { emptyInteraction, type Interaction } from "../physics/field";
 export class GestureLatch {
   private candidate = false;
@@ -14,40 +14,60 @@ export class GestureLatch {
     return this.value;
   }
 }
-/** Continuous confident hold with hysteresis; one creation per release cycle. */
+/** Preview begins immediately; only a deliberate release commits a single body. */
 export class CreationHold {
   private since: number | null = null;
-  private fired = false;
+  private releaseSince: number | null = null;
+  progress = 0;
+  active = false;
   reset() {
     this.since = null;
-    this.fired = false;
+    this.releaseSince = null;
+    this.progress = 0;
+    this.active = false;
   }
   update(pinch: number, time: number) {
-    if (pinch < 0.45) {
-      this.reset();
-      return false;
-    }
     if (this.since === null) {
-      if (pinch >= 0.72) this.since = time;
+      if (pinch >= 0.72) {
+        this.since = time;
+        this.progress = 0;
+        this.active = true;
+      }
       return false;
     }
-    if (!this.fired && time - this.since >= 1100) {
-      this.fired = true;
-      return true;
+    if (pinch < 0.45) {
+      this.releaseSince ??= time;
+      if (time - this.releaseSince < 40) return false;
+      const commit = this.releaseSince - this.since >= 450;
+      this.since = null;
+      this.releaseSince = null;
+      this.active = false;
+      return commit;
     }
+    this.releaseSince = null;
+    this.progress = Math.min(1, (time - this.since) / 650);
     return false;
   }
 }
 export class Hands {
-  private model: HandLandmarker | null = null;
+  private model: HandInference | null = null;
   private video = document.createElement("video");
   private stream: MediaStream | null = null;
-  private lastTime = -1;
   private lastFrame = 0;
+  private lastObservedAt = 0;
   private disposed = false;
   private input = emptyInteraction();
   private birthHold = new CreationHold();
   private birthSequence = 0;
+  private birthPosition: [number, number, number] = [0, 0, 0];
+  readonly diagnostics = {
+    inferenceMs: 0,
+    resultIntervalMs: 0,
+    resultAgeMs: 0,
+    samples: 0,
+    captureToResultMs: 0,
+    inFlight: 0,
+  };
   private latches = [new GestureLatch(), new GestureLatch()];
   async start() {
     if (!navigator.mediaDevices?.getUserMedia)
@@ -56,7 +76,12 @@ export class Hands {
       );
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: "user" },
+        video: {
+          width: 640,
+          height: 480,
+          frameRate: { ideal: 30, max: 30 },
+          facingMode: "user",
+        },
         audio: false,
       });
       if (this.disposed) {
@@ -67,24 +92,16 @@ export class Hands {
       this.video.muted = true;
       this.video.playsInline = true;
       await this.video.play();
-      const { FilesetResolver, HandLandmarker } =
-        await import("@mediapipe/tasks-vision");
-      const files = await FilesetResolver.forVisionTasks(
-        `${import.meta.env.BASE_URL}models/wasm`,
-      );
-      this.model = await HandLandmarker.createFromOptions(files, {
-        baseOptions: {
-          modelAssetPath:
-            import.meta.env.VITE_HAND_MODEL_URL ||
+      const model = new HandInference();
+      this.model = model;
+      await model.start(
+        new URL(import.meta.env.BASE_URL, location.href).href,
+        new URL(
+          import.meta.env.VITE_HAND_MODEL_URL ||
             "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-          delegate: "GPU",
-        },
-        runningMode: "VIDEO",
-        numHands: 2,
-        minHandDetectionConfidence: 0.65,
-        minHandPresenceConfidence: 0.65,
-        minTrackingConfidence: 0.65,
-      });
+          location.href,
+        ).href,
+      );
       if (this.disposed) {
         this.stop();
         return false;
@@ -105,20 +122,37 @@ export class Hands {
       this.birthHold.reset();
       return emptyInteraction();
     }
-    if (
-      time - this.lastFrame < 50 ||
-      this.video.currentTime === this.lastTime
-    ) {
-      if (time - this.lastFrame > 500) {
+    const result = this.model.detectForVideo(this.video, time);
+    const worker = this.model.diagnostics;
+    if (worker) {
+      this.diagnostics.inferenceMs = worker.inferenceMs;
+      this.diagnostics.captureToResultMs = worker.captureToResultMs;
+      this.diagnostics.inFlight = worker.inFlight;
+    }
+    this.diagnostics.resultAgeMs = time - this.lastObservedAt;
+    if (!result) {
+      // Results older than the deadline never keep controlling a vanished hand.
+      if (
+        time - this.lastFrame >
+        Math.min(1000, Math.max(200, this.diagnostics.captureToResultMs * 2))
+      ) {
         this.birthHold.reset();
         return emptyInteraction();
       }
       return this.input;
     }
-    if (time - this.lastFrame > 500) this.birthHold.reset();
-    this.lastTime = this.video.currentTime;
+    const observedAt = result.capturedAt ?? time;
+    if (time - observedAt > 1000) {
+      this.birthHold.reset();
+      return emptyInteraction();
+    }
+    this.diagnostics.resultIntervalMs = this.lastFrame
+      ? time - this.lastFrame
+      : 0;
     this.lastFrame = time;
-    const result = this.model.detectForVideo(this.video, time);
+    this.lastObservedAt = observedAt;
+    this.diagnostics.resultAgeMs = time - observedAt;
+    this.diagnostics.samples++;
     this.input = { active: false, expansion: 0, fields: [] };
     let leftTracked = false;
     result.landmarks.forEach((landmarks, i) => {
@@ -137,7 +171,7 @@ export class Hands {
       const left = result.handedness[i][0].categoryName === "Left";
       const fist = this.latches[left ? 0 : 1].update(
         1 - Math.min(1, Math.max(0, (extension - 1) / 0.8)),
-        time,
+        observedAt,
       );
       this.input.fields[left ? 0 : 1] = {
         position: [
@@ -151,11 +185,22 @@ export class Hands {
       };
       if (left) {
         leftTracked = true;
-        if (this.birthHold.update(pinch, time))
+        const released = this.birthHold.update(pinch, observedAt);
+        if (pinch >= 0.45)
+          this.birthPosition = [...this.input.fields[0].position];
+        if (this.birthHold.active)
+          this.input.formation = {
+            position: [...this.birthPosition],
+            progress: this.birthHold.progress,
+          };
+        if (released)
           this.input.birth = {
             sequence: ++this.birthSequence,
-            position: [...this.input.fields[0].position],
+            position: [...this.birthPosition],
+            progress: this.birthHold.progress,
           };
+        // Open palm scatters the local dust; it never destroys a released body.
+        this.input.expansion = pinch < 0.25 ? 1 : 0;
       }
       this.input.active = true;
     });

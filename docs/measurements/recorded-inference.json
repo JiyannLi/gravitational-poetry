@@ -1,0 +1,139 @@
+{
+  "source": "User reference video; offline browser replay, not live camera",
+  "backend": "Headless Chromium SwiftShader, MediaPipe GPU delegate",
+  "sourceOffsetSeconds": 2,
+  "inputResolution": [
+    360,
+    640
+  ],
+  "warmMedianMs": 346.9000000000233,
+  "warmP95Ms": 372.89999999990687,
+  "framesWithHands": 0,
+  "rows": [
+    {
+      "videoTime": 0.1,
+      "inferenceMs": 2441.9000000000233,
+      "hands": 0
+    },
+    {
+      "videoTime": 0.2,
+      "inferenceMs": 337.80000000004657,
+      "hands": 0
+    },
+    {
+      "videoTime": 0.30000000000000004,
+      "inferenceMs": 353.0999999999767,
+      "hands": 0
+    },
+    {
+      "videoTime": 0.4,
+      "inferenceMs": 372.89999999990687,
+      "hands": 0
+    },
+    {
+      "videoTime": 0.5,
+      "inferenceMs": 396.39999999990687,
+      "hands": 0
+    },
+    {
+      "videoTime": 0.6,
+      "inferenceMs": 368,
+      "hands": 0
+    },
+    {
+      "videoTime": 0.7000000000000001,
+      "inferenceMs": 349.5999999999767,
+      "hands": 0
+    },
+    {
+      "videoTime": 0.8,
+      "inferenceMs": 335.5999999999767,
+      "hands": 0
+    },
+    {
+      "videoTime": 0.9,
+      "inferenceMs": 361.70000000006985,
+      "hands": 0
+    },
+    {
+      "videoTime": 1,
+      "inferenceMs": 337.4000000000233,
+      "hands": 0
+    },
+    {
+      "videoTime": 1.1,
+      "inferenceMs": 316.69999999995343,
+      "hands": 0
+    },
+    {
+      "videoTime": 1.2000000000000002,
+      "inferenceMs": 347,
+      "hands": 0
+    },
+    {
+      "videoTime": 1.3000000000000003,
+      "inferenceMs": 345.5,
+      "hands": 0
+    },
+    {
+      "videoTime": 1.4000000000000001,
+      "inferenceMs": 352.5999999999767,
+      "hands": 0
+    },
+    {
+      "videoTime": 1.5000000000000002,
+      "inferenceMs": 341.4000000000233,
+      "hands": 0
+    },
+    {
+      "videoTime": 1.6,
+      "inferenceMs": 370.5,
+      "hands": 0
+    },
+    {
+      "videoTime": 1.7000000000000002,
+      "inferenceMs": 348.69999999995343,
+      "hands": 0
+    },
+    {
+      "videoTime": 1.8000000000000003,
+      "inferenceMs": 346.9000000000233,
+      "hands": 0
+    },
+    {
+      "videoTime": 1.9000000000000001,
+      "inferenceMs": 341.5,
+      "hands": 0
+    },
+    {
+      "videoTime": 2,
+      "inferenceMs": 353,
+      "hands": 0
+    },
+    {
+      "videoTime": 2.1,
+      "inferenceMs": 331.19999999995343,
+      "hands": 0
+    },
+    {
+      "videoTime": 2.2,
+      "inferenceMs": 344.4000000000233,
+      "hands": 0
+    },
+    {
+      "videoTime": 2.3000000000000003,
+      "inferenceMs": 321.19999999995343,
+      "hands": 0
+    },
+    {
+      "videoTime": 2.4000000000000004,
+      "inferenceMs": 329,
+      "hands": 0
+    },
+    {
+      "videoTime": 2.5000000000000004,
+      "inferenceMs": 341.89999999990687,
+      "hands": 0
+    }
+  ]
+}

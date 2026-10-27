@@ -75,16 +75,24 @@ describe("mutual gravitational dynamics", () => {
     system.clear();
     expect(system.fields()).toEqual([]);
   });
-  it("requires a sustained pinch and a release before the next star", () => {
+  it("previews immediately, commits only once on deliberate release and cancels tracking loss", () => {
     const hold = new CreationHold();
     expect(hold.update(0.9, 0)).toBe(false);
+    expect(hold.active).toBe(true);
+    hold.update(0.9, 325);
+    expect(hold.progress).toBeCloseTo(0.5);
     expect(hold.update(0.9, 900)).toBe(false);
-    expect(hold.update(0.9, 1200)).toBe(true);
-    expect(hold.update(0.9, 3000)).toBe(false);
+    expect(hold.update(0.3, 950)).toBe(false);
+    expect(hold.update(0.3, 1000)).toBe(true);
+    expect(hold.active).toBe(false);
+    expect(hold.update(0.3, 1100)).toBe(false);
+    hold.update(0.9, 1200);
+    expect(hold.progress).toBe(0);
+    hold.update(0.3, 1300);
+    expect(hold.update(0.3, 1350)).toBe(false);
+    hold.update(0.9, 1500);
+    hold.update(0.9, 2200);
     hold.reset();
-    expect(hold.update(0.9, 4000)).toBe(false);
-    expect(hold.update(0.3, 4400)).toBe(false);
-    expect(hold.update(0.9, 5000)).toBe(false);
-    expect(hold.update(0.9, 6200)).toBe(true);
+    expect(hold.update(0.3, 2400)).toBe(false);
   });
 });

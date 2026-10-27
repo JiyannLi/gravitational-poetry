@@ -58,3 +58,5 @@ Deployment is only confirmed when the Pages workflow succeeds and the returned p
 See [architecture](docs/ARCHITECTURE.md) and [agent instructions](AGENTS.md). Phase 2 introduces mutually interacting massive bodies and binary/three-body dynamics; Phase 3 adds state-driven cosmic phenomena; Phase 4 adds audio and broader device refinement.
 
 This prototype does not implement black holes, genesis, massive celestial bodies or audio. GPU float-target support is required. The nebula background is an artistic layer rather than volumetric scattering. Adaptive quality intentionally trades particle density for responsiveness. Real hand-tracking quality and sustained hardware-GPU performance remain device-specific validation tasks.
+
+For a reproducible model/inference smoke check, download the official model linked above over verified HTTPS, start `npm run preview`, then run `HAND_MODEL_PATH=/absolute/path/hand_landmarker.task npm run test:camera`. This uses Chromium synthetic video and real model inference; it does not validate real-hand accuracy.

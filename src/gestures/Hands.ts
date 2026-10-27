@@ -71,13 +71,13 @@ export class Hands {
   }
   read(time: number, aspect: number): Interaction {
     if (
-      !this.model ||
-      this.video.readyState < 2 ||
+      this.model &&
       !this.stream?.getVideoTracks().some((t) => t.readyState === "live")
     )
-      return emptyInteraction();
+      throw new Error("Camera disconnected.");
+    if (!this.model || this.video.readyState < 2) return emptyInteraction();
     if (time - this.lastFrame < 50 || this.video.currentTime === this.lastTime)
-      return this.input;
+      return time - this.lastFrame > 500 ? emptyInteraction() : this.input;
     this.lastTime = this.video.currentTime;
     this.lastFrame = time;
     const result = this.model.detectForVideo(this.video, time);
@@ -95,12 +95,12 @@ export class Hands {
       const pinch = 1 - Math.min(1, distance(4, 8) / scale);
       const extension =
         [8, 12, 16, 20].reduce((s, j) => s + distance(j, 0) / scale, 0) / 4;
-      const fist = this.latches[i].update(
+      const left = result.handedness[i][0].categoryName === "Left";
+      const fist = this.latches[left ? 0 : 1].update(
         1 - Math.min(1, Math.max(0, (extension - 1) / 0.8)),
         time,
       );
-      const left = result.handedness[i][0].categoryName === "Left";
-      this.input.fields.push({
+      this.input.fields[left ? 0 : 1] = {
         position: [
           (1 - ((palm.x + wrist.x) / 2) * 2) * 22 * aspect,
           (1 - (palm.y + wrist.y)) * 22,
@@ -109,7 +109,7 @@ export class Hands {
         strength: left ? 4 + pinch * 20 : 8 + pinch * 35 + (fist ? 25 : 0),
         radius: 8,
         creation: left ? Math.max(0, 1 - pinch) : 0,
-      });
+      };
       this.input.active = true;
     });
     return this.input;

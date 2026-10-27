@@ -20,7 +20,10 @@ export function App() {
       universe.current = new Universe(
         host.current!,
         (fps, count, state) => setStats({ fps, count, state }),
-        setError,
+        (message) => {
+          setError(message);
+          setCamera("off");
+        },
       );
     } catch (e) {
       setFatal(true);

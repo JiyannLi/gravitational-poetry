@@ -143,7 +143,8 @@ export class Universe {
   private tick = (now: number) => {
     if (this.disposed) return;
     this.frame = requestAnimationFrame(this.tick);
-    const dt = this.previous ? Math.min((now - this.previous) / 1000, 0.1) : 0;
+    const wallDt = this.previous ? (now - this.previous) / 1000 : 0;
+    const dt = Math.min(wallDt, 0.1);
     this.previous = now;
     if (document.hidden) return;
     let target: Interaction;
@@ -182,7 +183,7 @@ export class Universe {
     );
     this.composer.render();
     this.samples++;
-    this.total += dt;
+    this.total += wallDt;
     if (this.total >= 1) {
       const fps = Math.round(this.samples / this.total);
       if (fps < 28 && !this.paused) this.lowFrames++;

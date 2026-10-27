@@ -9,6 +9,7 @@ export interface Interaction {
   fields: Field[];
   active: boolean;
   expansion: number;
+  birth?: { sequence: number; position: Vec3 };
 }
 export const emptyInteraction = (): Interaction => ({
   fields: [],

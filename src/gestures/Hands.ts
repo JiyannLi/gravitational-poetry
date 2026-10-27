@@ -14,6 +14,30 @@ export class GestureLatch {
     return this.value;
   }
 }
+/** Continuous confident hold with hysteresis; one creation per release cycle. */
+export class CreationHold {
+  private since: number | null = null;
+  private fired = false;
+  reset() {
+    this.since = null;
+    this.fired = false;
+  }
+  update(pinch: number, time: number) {
+    if (pinch < 0.45) {
+      this.reset();
+      return false;
+    }
+    if (this.since === null) {
+      if (pinch >= 0.72) this.since = time;
+      return false;
+    }
+    if (!this.fired && time - this.since >= 1100) {
+      this.fired = true;
+      return true;
+    }
+    return false;
+  }
+}
 export class Hands {
   private model: HandLandmarker | null = null;
   private video = document.createElement("video");
@@ -22,6 +46,8 @@ export class Hands {
   private lastFrame = 0;
   private disposed = false;
   private input = emptyInteraction();
+  private birthHold = new CreationHold();
+  private birthSequence = 0;
   private latches = [new GestureLatch(), new GestureLatch()];
   async start() {
     if (!navigator.mediaDevices?.getUserMedia)
@@ -75,13 +101,26 @@ export class Hands {
       !this.stream?.getVideoTracks().some((t) => t.readyState === "live")
     )
       throw new Error("Camera disconnected.");
-    if (!this.model || this.video.readyState < 2) return emptyInteraction();
-    if (time - this.lastFrame < 50 || this.video.currentTime === this.lastTime)
-      return time - this.lastFrame > 500 ? emptyInteraction() : this.input;
+    if (!this.model || this.video.readyState < 2) {
+      this.birthHold.reset();
+      return emptyInteraction();
+    }
+    if (
+      time - this.lastFrame < 50 ||
+      this.video.currentTime === this.lastTime
+    ) {
+      if (time - this.lastFrame > 500) {
+        this.birthHold.reset();
+        return emptyInteraction();
+      }
+      return this.input;
+    }
+    if (time - this.lastFrame > 500) this.birthHold.reset();
     this.lastTime = this.video.currentTime;
     this.lastFrame = time;
     const result = this.model.detectForVideo(this.video, time);
     this.input = { active: false, expansion: 0, fields: [] };
+    let leftTracked = false;
     result.landmarks.forEach((landmarks, i) => {
       if ((result.handedness[i]?.[0]?.score ?? 0) < 0.65) return;
       const palm = landmarks[9],
@@ -110,12 +149,22 @@ export class Hands {
         radius: 8,
         creation: left ? Math.max(0, 1 - pinch) : 0,
       };
+      if (left) {
+        leftTracked = true;
+        if (this.birthHold.update(pinch, time))
+          this.input.birth = {
+            sequence: ++this.birthSequence,
+            position: [...this.input.fields[0].position],
+          };
+      }
       this.input.active = true;
     });
+    if (!leftTracked) this.birthHold.reset();
     return this.input;
   }
   stop() {
     this.disposed = true;
+    this.birthHold.reset();
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
     this.video.pause();

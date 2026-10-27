@@ -11,4 +11,6 @@ This is a creative WebGL artwork, not a game. Prioritize smooth, continuous phys
 - Camera access is opt-in, local-only, and must release on page hide or unmount. Keep pointer fallback available when permissions or model loading fail.
 - Never commit generated WASM, dist, credentials, or browser artifacts. The public MediaPipe model loads from Google's versioned HTTPS asset; `VITE_HAND_MODEL_URL` can point to a self-hosted copy.
 - Run GPU browser checks after shader changes; TypeScript cannot validate GLSL.
-- Phase 2–4 are future work: do not imply binary stars, black holes, genesis or audio already exist.
+- Phase 2 includes massive stars, binary/three-body dynamics, inertial field control and a measured slingshot encounter. Phase 3–4 remain future work: do not imply black holes, genesis, collisions/mergers or audio already exist.
+- Keep the particle population and render resolution stable during a scene. FPS telemetry must not replace the GPU simulation or clear a presented canvas; retain the startup-flash browser regressions.
+- Body physics uses dimensionless units. Check isolated binary energy/momentum and the slingshot trajectory after force/integrator changes. Never move bodies directly to hand targets or prescribe their paths.

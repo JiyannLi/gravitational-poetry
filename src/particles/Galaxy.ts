@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GPUComputationRenderer } from "three/addons/misc/GPUComputationRenderer.js";
-import type { Interaction } from "../physics/field";
+import type { Field, Interaction } from "../physics/field";
+import { BODY_CONFIG } from "../physics/BodySystem";
 const force = `
 vec3 acceleration(vec3 p) {
  vec3 a=-p*5.0/pow(dot(p,p)+9.0,1.5);
@@ -9,6 +10,9 @@ vec3 acceleration(vec3 p) {
   float r2=dot(d,d)+0.64;
   a+=d*fields[i].w/pow(r2,1.5);
   a+=cross(vec3(0.,0.,1.),d)*creation[i]*exp(-r2/90.)*.10;
+ }
+ for(int i=0;i<${BODY_CONFIG.maxBodies};i++) {
+  if(bodyFields[i].w>0.) {vec3 d=bodyFields[i].xyz-p;float r2=dot(d,d)+0.64;a+=d*bodyFields[i].w/pow(r2,1.5);}
  }
  return a+normalize(p+vec3(.001))*expansion*.8;
 }`;
@@ -21,7 +25,7 @@ float source(vec2 uv){
 }
 vec3 birthplace(vec2 uv,int i){float a=random(uv)*6.283;float r=sqrt(random(uv+.37))*3.;return fields[i].xyz+vec3(cos(a)*r,sin(a)*r,(random(uv+.61)-.5)*2.);}
 `;
-const uniforms = `uniform float dt; uniform float time; uniform vec4 fields[2]; uniform float creation[2]; uniform float expansion;`;
+const uniforms = `uniform float dt; uniform float time; uniform vec4 fields[2]; uniform float creation[2]; uniform float expansion; uniform vec4 bodyFields[${BODY_CONFIG.maxBodies}];`;
 export class Galaxy {
   readonly points: THREE.Points;
   readonly trails: THREE.LineSegments;
@@ -81,6 +85,12 @@ void main(){vec2 uv=gl_FragCoord.xy/resolution.xy;vec3 p=texture2D(texturePositi
         dt: { value: 0 },
         time: { value: 0 },
         fields: { value: [new THREE.Vector4(), new THREE.Vector4()] },
+        bodyFields: {
+          value: Array.from(
+            { length: BODY_CONFIG.maxBodies },
+            () => new THREE.Vector4(),
+          ),
+        },
         creation: { value: [0, 0] },
         expansion: { value: 0 },
       });
@@ -157,7 +167,7 @@ alpha=.3+p.w*.6;gl_PointSize=clamp((1.1+p.w*1.8)*pixelRatio*48./max(5.,-view.z),
     this.points.frustumCulled = false;
     this.sync();
   }
-  step(dt: number, input: Interaction) {
+  step(dt: number, input: Interaction, bodies: Field[] = []) {
     this.time += dt;
     if (this.time - this.lastHistory > 0.35) {
       this.gpu.renderTexture(
@@ -171,6 +181,13 @@ alpha=.3+p.w*.6;gl_PointSize=clamp((1.1+p.w*1.8)*pixelRatio*48./max(5.,-view.z),
       u.dt.value = dt;
       u.time.value = this.time;
       u.expansion.value = input.expansion;
+      for (let i = 0; i < BODY_CONFIG.maxBodies; i++) {
+        const body = bodies[i];
+        u.bodyFields.value[i].set(
+          ...(body?.position ?? [0, 0, 0]),
+          body?.strength ?? 0,
+        );
+      }
       for (let i = 0; i < 2; i++) {
         const f = input.fields[i];
         u.fields.value[i].set(...(f?.position ?? [0, 0, 0]), f?.strength ?? 0);

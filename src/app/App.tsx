@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Universe } from "../scene/Universe";
+import { Universe, type OrbitStatus } from "../scene/Universe";
+import { BODY_CONFIG, type OrbitPreset } from "../physics/BodySystem";
 export function App() {
   const host = useRef<HTMLDivElement>(null),
     universe = useRef<Universe | null>(null);
@@ -7,7 +8,7 @@ export function App() {
     [fatal, setFatal] = useState(false),
     [stats, setStats] = useState({ fps: 0, count: 65536, state: "Silence" });
   const [camera, setCamera] = useState<"off" | "loading" | "on">("off"),
-    [mode, setMode] = useState<"gravity" | "creation">("gravity"),
+    [mode, setMode] = useState<"gravity" | "creation" | "star">("gravity"),
     [paused, setPaused] = useState(false),
     [settings, setSettings] = useState(false),
     [help, setHelp] = useState(false),
@@ -15,6 +16,15 @@ export function App() {
     [started, setStarted] = useState(false),
     [speed, setSpeed] = useState(1),
     [bloom, setBloom] = useState(0.62);
+  const [systems, setSystems] = useState(false);
+  const [mass, setMass] = useState(BODY_CONFIG.defaultMass);
+  const [orbit, setOrbit] = useState<OrbitStatus>({
+    stars: 0,
+    preset: "empty",
+    event: "",
+    gain: 0,
+    notice: "",
+  });
   useEffect(() => {
     try {
       universe.current = new Universe(
@@ -24,6 +34,7 @@ export function App() {
           setError(message);
           setCamera("off");
         },
+        setOrbit,
       );
     } catch (e) {
       setFatal(true);
@@ -38,7 +49,7 @@ export function App() {
     const wake = () => {
       setHidden(false);
       clearTimeout(timer);
-      if (started && !settings && !help)
+      if (started && !settings && !help && !systems)
         timer = setTimeout(() => setHidden(true), 6500);
     };
     wake();
@@ -49,7 +60,7 @@ export function App() {
       window.removeEventListener("pointermove", wake);
       window.removeEventListener("keydown", wake);
     };
-  }, [started, settings, help]);
+  }, [started, settings, help, systems]);
   useEffect(() => {
     const keys = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return;
@@ -62,9 +73,18 @@ export function App() {
       }
       if (e.key.toLowerCase() === "g") changeMode("gravity");
       if (e.key.toLowerCase() === "c") changeMode("creation");
+      if (e.key.toLowerCase() === "s") {
+        changeMode("star");
+        setSystems(true);
+        setStarted(true);
+      }
+      if (e.key.toLowerCase() === "b") loadPreset("binary");
+      if (e.key.toLowerCase() === "t") loadPreset("three-body");
+      if (e.key.toLowerCase() === "l") loadPreset("slingshot");
       if (e.key === "Escape") {
         setSettings(false);
         setHelp(false);
+        setSystems(false);
       }
     };
     window.addEventListener("keydown", keys);
@@ -77,9 +97,14 @@ export function App() {
       document.removeEventListener("visibilitychange", visibility);
     };
   }, []);
-  function changeMode(value: "gravity" | "creation") {
+  function changeMode(value: "gravity" | "creation" | "star") {
     setMode(value);
     if (universe.current) universe.current.pointer.mode = value;
+  }
+  function loadPreset(preset: OrbitPreset) {
+    universe.current?.loadSystem(preset);
+    changeMode("gravity");
+    setStarted(true);
   }
   async function enableCamera() {
     if (camera === "on") {
@@ -125,12 +150,15 @@ export function App() {
           </span>
         </a>
         <div className="edition">
-          AN INTERACTIVE COSMIC EXPERIENCE<span>001 — THE FIRST LIGHT</span>
+          AN INTERACTIVE COSMIC EXPERIENCE<span>002 — THE ORBITAL AGE</span>
         </div>
         <button
           className="icon-button"
           aria-label="Open guide"
-          onClick={() => setHelp(!help)}
+          onClick={() => {
+            setHelp(!help);
+            setSystems(false);
+          }}
         >
           ?
         </button>
@@ -177,7 +205,15 @@ export function App() {
         <span>RA 23h 18m 42s</span>
         <span>DEC +61° 32′ 08″</span>
         <i />
-        <span>OBSERVATORY / 001</span>
+        <span>OBSERVATORY / 002</span>
+        {orbit.stars > 0 && (
+          <span className="body-count" aria-live="polite">
+            {orbit.stars} {orbit.stars === 1 ? "STAR" : "STARS"} ·{" "}
+            {orbit.preset === "three-body"
+              ? "THREE-BODY"
+              : orbit.preset.toUpperCase()}
+          </span>
+        )}
       </aside>
       <div className="state chrome">
         <span className="status-dot" />
@@ -187,6 +223,20 @@ export function App() {
           FPS
         </small>
       </div>
+      {orbit.event && (
+        <div className="orbital-event chrome" role="status">
+          <span>AN EMERGENT MOMENT</span>
+          <p>{orbit.event}</p>
+          {orbit.gain > 0 && (
+            <small>Energy transferred. A new trajectory.</small>
+          )}
+        </div>
+      )}
+      {mode === "star" && (
+        <div className="placement-hint chrome">
+          Tap the universe to place a star · {orbit.stars}/3
+        </div>
+      )}
       {error && (
         <div className="notice" role="alert">
           {error}
@@ -219,12 +269,85 @@ export function App() {
           </p>
           <p>
             With the camera enabled: your left hand shapes matter; your right
-            hand controls gravity. Pinch to concentrate, hold a fist to
-            strengthen the field.
+            hand controls gravity. Pinch to concentrate; hold a left pinch for a
+            second to form one star, then release before creating another. Hold
+            a right fist to strengthen the field.
+          </p>
+          <p>
+            <b>S</b> places a star. <b>B</b> seeds a binary orbit. <b>T</b>{" "}
+            begins three-body motion. <b>L</b> launches a gravity-assist
+            encounter. Switch to Gravity to gently pull stars without moving
+            them instantly.
           </p>
           <small>
             Your universe keeps evolving when your hands leave. Camera frames
             never leave this device.
+          </small>
+        </section>
+      )}
+      {systems && (
+        <section
+          className="panel systems-panel chrome"
+          aria-label="Celestial systems"
+        >
+          <button
+            className="close"
+            aria-label="Close systems"
+            onClick={() => setSystems(false)}
+          >
+            ×
+          </button>
+          <div className="eyebrow">CHAPTER II / ORBITAL POETRY</div>
+          <h2>Let gravity write.</h2>
+          <p>
+            Plant a star, or give a system its first motion. Everything that
+            follows is gravity.
+          </p>
+          <div className="system-options">
+            <button
+              className={mode === "star" ? "active" : ""}
+              onClick={() => {
+                changeMode("star");
+                setStarted(true);
+              }}
+            >
+              Place a star <span>S</span>
+            </button>
+            <button onClick={() => loadPreset("binary")}>
+              Binary stars <span>B</span>
+            </button>
+            <button onClick={() => loadPreset("three-body")}>
+              Three-body motion <span>T</span>
+            </button>
+            <button onClick={() => loadPreset("slingshot")}>
+              Gravitational slingshot <span>L</span>
+            </button>
+          </div>
+          <label>
+            New star mass <output>{mass}</output>
+            <input
+              type="range"
+              aria-label="New star mass"
+              min={BODY_CONFIG.minMass}
+              max={BODY_CONFIG.maxMass}
+              step="2"
+              value={mass}
+              onChange={(e) => {
+                setMass(+e.target.value);
+                if (universe.current)
+                  universe.current.starMass = +e.target.value;
+              }}
+            />
+          </label>
+          <div className="system-bottom">
+            <span>{orbit.stars} / 3 stars</span>
+            <button onClick={() => universe.current?.clearStars()}>
+              Clear stars
+            </button>
+          </div>
+          <small role="status">
+            {orbit.notice ||
+              "Hand and pointer fields pull stars with inertia. Let go to watch them evolve."}
           </small>
         </section>
       )}
@@ -292,6 +415,18 @@ export function App() {
             <span>✧</span>
             <span className="button-label">Create</span>
           </button>
+          <button
+            aria-label="Celestial systems"
+            aria-expanded={systems}
+            className={systems ? "selected" : ""}
+            onClick={() => {
+              setSystems(!systems);
+              setSettings(false);
+              setHelp(false);
+            }}
+          >
+            ✺
+          </button>
           <i />
           <button aria-label={paused ? "Resume" : "Pause"} onClick={pause}>
             {paused ? "▷" : "Ⅱ"}
@@ -311,7 +446,10 @@ export function App() {
           <button
             aria-label="Settings"
             aria-expanded={settings}
-            onClick={() => setSettings(!settings)}
+            onClick={() => {
+              setSettings(!settings);
+              setSystems(false);
+            }}
           >
             ⚙
           </button>

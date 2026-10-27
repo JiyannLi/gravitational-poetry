@@ -7,7 +7,22 @@ import { Galaxy } from "../particles/Galaxy";
 import { Pointer } from "../interactions/Pointer";
 import { Hands } from "../gestures/Hands";
 import { FixedClock, smooth, type Interaction } from "../physics/field";
+import {
+  BodySystem,
+  BODY_CONFIG,
+  type OrbitPreset,
+} from "../physics/BodySystem";
+import { OrbitalEvents } from "../events/OrbitalEvents";
+import { CelestialBodies } from "./CelestialBodies";
+import type { Vec3 } from "../physics/field";
 import { CONFIG } from "../config/universe";
+export interface OrbitStatus {
+  stars: number;
+  preset: OrbitPreset | "custom" | "empty";
+  event: string;
+  gain: number;
+  notice: string;
+}
 export class Universe {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -17,6 +32,13 @@ export class Universe {
   private galaxy: Galaxy;
   readonly pointer: Pointer;
   private hands: Hands | null = null;
+  private bodies = new BodySystem();
+  private orbitEvents = new OrbitalEvents();
+  private celestial = new CelestialBodies();
+  private orbitPreset: OrbitStatus["preset"] = "empty";
+  private orbitNotice = "";
+  starMass = BODY_CONFIG.defaultMass;
+  private lastGestureBirth = 0;
   private clock = new FixedClock();
   private frame = 0;
   private previous = 0;
@@ -40,6 +62,7 @@ export class Universe {
     private container: HTMLElement,
     private report: (fps: number, count: number, state: string) => void,
     private fail: (message: string) => void,
+    private reportOrbit: (status: OrbitStatus) => void = () => {},
   ) {
     this.renderer = new THREE.WebGLRenderer({
       antialias: false,
@@ -61,7 +84,11 @@ export class Universe {
     const particleSize =
       innerWidth < 700 ? CONFIG.mobileSize : CONFIG.desktopSize;
     this.galaxy = new Galaxy(this.renderer, particleSize);
-    this.scene.add(this.galaxy.points, this.galaxy.trails);
+    this.scene.add(
+      this.galaxy.points,
+      this.galaxy.trails,
+      this.celestial.group,
+    );
     const starGeometry = new THREE.BufferGeometry(),
       stars = new Float32Array(2200 * 3);
     for (let i = 0; i < 2200; i++) {
@@ -162,6 +189,8 @@ export class Universe {
     this.previous = now;
     if (document.hidden) return;
     this.applyViewport();
+    for (const position of this.pointer.takeStars(this.camera.aspect))
+      this.addStar(position);
     let target: Interaction;
     try {
       target = this.hands
@@ -172,6 +201,10 @@ export class Universe {
       this.hands = null;
       this.fail("Hand tracking interrupted. Pointer controls are available.");
       target = this.pointer.read(this.camera.aspect);
+    }
+    if (target.birth && target.birth.sequence !== this.lastGestureBirth) {
+      this.lastGestureBirth = target.birth.sequence;
+      this.addStar(target.birth.position);
     }
     this.input.active = target.active;
     this.input.fields.forEach((f, i) => {
@@ -187,9 +220,12 @@ export class Universe {
     });
     if (!this.paused)
       this.clock.advance(dt, this.speed, (step) => {
-        this.galaxy.step(step, this.input);
+        this.bodies.step(step, this.input.fields);
+        this.orbitEvents.update(this.bodies);
+        this.galaxy.step(step, this.input, this.bodies.fields());
         this.elapsed += step;
       });
+    this.celestial.update(this.bodies);
     this.marker.position.set(...this.input.fields[0].position);
     (this.marker.material as THREE.MeshBasicMaterial).opacity = smooth(
       (this.marker.material as THREE.MeshBasicMaterial).opacity,
@@ -212,12 +248,51 @@ export class Universe {
           ? "Resonance"
           : "Silence",
       );
+      this.reportOrbit(this.orbitStatus());
       this.samples = 0;
       this.total = 0;
     }
   };
+  orbitStatus(): OrbitStatus {
+    const event = this.orbitEvents.status(this.bodies.time);
+    return {
+      stars: this.bodies.starCount,
+      preset: this.orbitPreset,
+      event: event?.label ?? "",
+      gain: event?.gain ?? 0,
+      notice: this.orbitNotice,
+    };
+  }
+  loadSystem(preset: OrbitPreset) {
+    this.bodies.load(preset);
+    this.orbitEvents.reset();
+    this.orbitPreset = preset;
+    this.orbitNotice = "";
+    this.celestial.update(this.bodies);
+    this.reportOrbit(this.orbitStatus());
+  }
+  addStar(position: Vec3) {
+    const created = this.bodies.addStar(position, this.starMass);
+    this.orbitNotice = created ? "" : "This universe holds up to three stars.";
+    if (created) {
+      this.orbitPreset = "custom";
+      this.orbitEvents.reset();
+      this.celestial.update(this.bodies);
+    }
+    this.reportOrbit(this.orbitStatus());
+    return !!created;
+  }
+  clearStars() {
+    this.bodies.clear();
+    this.orbitEvents.reset();
+    this.orbitPreset = "empty";
+    this.orbitNotice = "";
+    this.celestial.update(this.bodies);
+    this.reportOrbit(this.orbitStatus());
+  }
   async enableCamera() {
     this.hands?.stop();
+    this.lastGestureBirth = 0;
     const hands = new Hands();
     this.hands = hands;
     let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -252,6 +327,7 @@ export class Universe {
     this.bloom.strength = value;
   }
   reset() {
+    this.clearStars();
     this.galaxy.reset();
     this.elapsed = 0;
   }
@@ -274,6 +350,7 @@ export class Universe {
     );
     this.hands?.stop();
     this.pointer.dispose();
+    this.celestial.dispose();
     this.galaxy.dispose();
     this.scene.traverse((o) => {
       if (o instanceof THREE.Mesh || o instanceof THREE.Points) {
